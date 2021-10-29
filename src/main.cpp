@@ -16,11 +16,6 @@ void initialize_field(EM_field *f){
             f->E[i][j][0] = 0.0;
             f->E[i][j][1] = 0.0;
             f->mat[i][j] = vacuum;
-            f->K[i][j][0] = 0.0;
-            f->K[i][j][1] = 0.0;
-            f->K[i][j][2] = 0.0;
-            f->K[i][j][3] = 0.0;
-            f->out[i][j] = 0;
         }
     }
 }
