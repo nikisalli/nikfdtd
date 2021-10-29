@@ -1,0 +1,59 @@
+// H step kernel
+
+#version 450 core
+
+layout(local_size_x = 2, local_size_y = 2, local_size_z = 2) in;
+
+layout( constant_id = 0 ) const uint DIM = 800;
+
+layout(set = 0, binding = 0) buffer Hb { double H[800][800]; };
+layout(set = 0, binding = 1) readonly buffer Eb { double E[800][800][2]; };
+layout(set = 0, binding = 2) readonly buffer Kb { double K[800][800][4]; };
+layout(set = 0, binding = 3) writeonly buffer p_out { uint p[800][800]; };
+
+vec3 jet(float v){
+    vec3 c = vec3(1, 1, 1);
+    float dv, vmax = 1., vmin = -1.;
+    if (v < vmin)
+        v = vmin;
+    if (v > vmax)
+        v = vmax;
+    dv = vmax - vmin;
+
+    if (v < (vmin + 0.25 * dv)) {
+        c.r = 0;
+        c.g = 4 * (v - vmin) / dv;
+    } else if (v < (vmin + 0.5 * dv)) {
+        c.r = 0;
+        c.b = 1 + 4 * (vmin + 0.25 * dv - v) / dv;
+    } else if (v < (vmin + 0.75 * dv)) {
+        c.r = 4 * (v - vmin - 0.5 * dv) / dv;
+        c.b = 0;
+    } else {
+        c.g = 1 + 4 * (vmin + 0.75 * dv - v) / dv;
+        c.b = 0;
+    }
+    return c;
+}
+
+vec3 m(float v){
+    vec3 c = vec3(1, 1, 1);
+    float dv, vmax = 1., vmin = -1.;
+    if (v < vmin)
+        v = vmin;
+    if (v > vmax)
+        v = vmax;
+    dv = vmax - vmin;
+
+    c.b = (v + 1.0) * 127;
+    return c;
+}
+
+void main (void){
+    uint i = gl_WorkGroupID.x;
+    uint j = gl_WorkGroupID.y;
+    H[i][j] = K[i][j][2] * H[i][j] + K[i][j][3] * (E[i][j + 1][0] - E[i][j][0] + E[i][j][1] - E[i + 1][j][1]);
+
+    vec3 bytes = jet(float(H[i][j]));
+    p[j][i] = (uint(bytes.b * 255) << 16) | (uint(bytes.g * 255) << 8) | uint(bytes.r * 255) | 0xFF000000;
+}

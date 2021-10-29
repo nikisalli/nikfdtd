@@ -1,0 +1,3 @@
+[submodule "src/vuda"]
+	path = src/vuda
+	url = https://github.com/jgbit/vuda.git
