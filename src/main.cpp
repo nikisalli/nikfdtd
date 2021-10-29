@@ -145,9 +145,9 @@ int main (void){
     double t = get_time();
     while (1) {
         k++;
-        // H[150][400] = sin(k / 20.0f) * 30.0f;
+        H[150][400] = sin(k / 20.0f) * 30.0f;
         // modify magnetic field and copy it to the gpu
-        H[150][400] = powf64(2.718, -(powf64(k - 60, 2) / 100)) * 100;
+        // H[150][400] = powf64(2.718, -(powf64(k - 60, 2) / 100)) * 100;
         printf("%f\n", H[150][400]);
         #if defined(USE_CUDA)
             vuda::memcpy(dev_H, H, WIDTH * HEIGHT * sizeof(double), cudaMemcpyHostToDevice);
@@ -161,7 +161,7 @@ int main (void){
         // printf("%d\n", k);
         for (int i = 0; i < WIDTH - 1; i++){
             for (int j = 0; j < HEIGHT - 1; j++){
-                if (i < powf64(j - 400, 2) * 0.005 + 100){
+                if (i < powf64(j - 400, 2) * 0.001 + 100){
                     H[i][j] = 0;
                     E[i][j][0] = 0;
                     E[i][j][1] = 0;
