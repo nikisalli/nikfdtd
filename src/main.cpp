@@ -145,7 +145,6 @@ int main (void){
         // gaussian impulse
         // H[150][400] = powf64(2.718, -(powf64(k - 60, 2) / 100)) * 100;
 
-        printf("%f\n", H[150][400]);
         #if defined(USE_CUDA)
             vuda::memcpy(dev_H, H, WIDTH * HEIGHT * sizeof(double), cudaMemcpyHostToDevice);
         #endif
@@ -174,7 +173,7 @@ int main (void){
         if (poll_quit())
             break;
 
-        // printf("%ffps\n", 1000.0 / (get_time() - t));
+        printf("%ffps\n", 1000.0 / (get_time() - t));
         t = get_time();
     }
     #if defined(USE_CUDA)
