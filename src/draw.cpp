@@ -43,6 +43,8 @@ void draw_field(EM_field* f){
     SDL_Texture *texture = SDL_CreateTextureFromSurface (renderer, surface);
     SDL_RenderCopy (renderer, texture, NULL, NULL);
     SDL_RenderPresent (renderer);
+    SDL_FreeSurface (surface);
+    SDL_DestroyTexture (texture);
     #else
     for (int i = 0; i < WIDTH; i++){
         for (int j = 0; j < HEIGHT; j++){
