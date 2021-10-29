@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <config.h>
-
+#include <data_structures.h>
 
 typedef struct color{
     double r,g,b;
@@ -10,8 +10,6 @@ typedef struct color{
 
 color jet(double v);
 void init_sdl ();
-void draw_E (double E[WIDTH][HEIGHT][2]);
-void draw_H (double H[WIDTH][HEIGHT]);
-void draw_out (uint32_t out[WIDTH][HEIGHT]);
+void draw_field(EM_field* f);
 void stop_sdl ();
 bool poll_quit ();

@@ -37,26 +37,22 @@ void init_sdl (){
     SDL_RenderClear (renderer);
 }
 
-void draw_E (double E[WIDTH][HEIGHT][2]){
-    
-}
-
-void draw_H (double H[WIDTH][HEIGHT]){
+void draw_field(EM_field* f){
+    #if defined(USE_CUDA)
+    SDL_Surface *surface = SDL_CreateRGBSurfaceFrom (f->out, WIDTH, HEIGHT, 32, WIDTH * 4, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+    SDL_Texture *texture = SDL_CreateTextureFromSurface (renderer, surface);
+    SDL_RenderCopy (renderer, texture, NULL, NULL);
+    SDL_RenderPresent (renderer);
+    #else
     for (int i = 0; i < WIDTH; i++){
         for (int j = 0; j < HEIGHT; j++){
-            color c = jet(H[i][j]);
+            color c = jet(f->H[i][j]);
             SDL_SetRenderDrawColor(renderer, c.r * 255, c.g * 255, c.b * 255, 255);
             SDL_RenderDrawPoint (renderer, i, j);
         }
     }
     SDL_RenderPresent (renderer);
-}
-
-void draw_out (uint32_t out[WIDTH][HEIGHT]){
-    SDL_Surface *surface = SDL_CreateRGBSurfaceFrom (out, WIDTH, HEIGHT, 32, WIDTH * 4, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
-    SDL_Texture *texture = SDL_CreateTextureFromSurface (renderer, surface);
-    SDL_RenderCopy (renderer, texture, NULL, NULL);
-    SDL_RenderPresent (renderer);
+    #endif
 }
 
 void stop_sdl (){
