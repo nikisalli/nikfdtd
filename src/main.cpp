@@ -19,11 +19,13 @@ material mymat[WIDTH][HEIGHT] = {};
 double K[WIDTH][HEIGHT][4] = {};  // precomputed constant values Ca Cb Da Db
 uint32_t out[WIDTH][HEIGHT] = {}; // pixel array
 
+#if defined(USE_CUDA)
 // gpu buffers
 double* dev_H = nullptr;
 double* dev_E = nullptr;
 double* dev_K = nullptr;
 uint32_t* dev_out = nullptr;
+#endif
 
 void precompute_material (material mat[WIDTH][HEIGHT], double K[WIDTH][HEIGHT][4]){
     for (int i = 0; i < WIDTH; i++){
@@ -44,8 +46,10 @@ void E_step (){
         vuda::dim3 grid(WIDTH, HEIGHT);
         vuda::launchKernel("E.spv", "main", 0, grid, HEIGHT, dev_H, dev_E, dev_K, dev_out);
         // cudaMemcpy(E, dev_E, WIDTH * HEIGHT * 2 * sizeof(double), cudaMemcpyDeviceToHost);  // E is a 2-dimensional vector
-    #elif defined(USE_OMP)
-    #pragma omp parallel for schedule(static, 83300) collapse(2)
+    #else
+        # if defined(USE_OMP)
+            #pragma omp parallel for schedule(static, 83300) collapse(2)
+        # endif
         for (int i = 1; i < WIDTH; i++) {
             for (int j = 1; j < HEIGHT; j++) { 
                 E[i][j][0] = K[i][j][0] * E[i][j][0] + K[i][j][1] * (H[i][j] - H[i][j - 1]);
@@ -53,13 +57,6 @@ void E_step (){
             }
             // no code here
         }
-    #else
-    for (int i = 1; i < WIDTH - 1; i++){
-        for (int j = 1; j < HEIGHT - 1; j++){
-            E[i][j][0] = K[i][j][0] * E[i][j][0] + K[i][j][1] * (H[i][j] - H[i][j - 1]);
-            E[i][j][1] = K[i][j][0] * E[i][j][1] + K[i][j][1] * (H[i - 1][j] - H[i][j]);
-        }
-    }
     #endif
 }
 
@@ -68,20 +65,16 @@ void H_step (){
         vuda::dim3 grid(WIDTH, HEIGHT);
         vuda::launchKernel("H.spv", "main", 0, grid, HEIGHT, dev_H, dev_E, dev_K, dev_out);
         vuda::memcpy(out, dev_out, WIDTH * HEIGHT * sizeof(uint32_t), cudaMemcpyDeviceToHost);
-    #elif defined(USE_OMP)
-    #pragma omp parallel for schedule(static, 83300) collapse(2)
-    for (int i = 1; i < WIDTH - 1; i++) {
-        for (int j = 1; j < HEIGHT - 1; j++) { 
-            H[i][j] = K[i][j][2] * H[i][j] + K[i][j][3] * (E[i][j + 1][0] - E[i][j][0] + E[i][j][1] - E[i + 1][j][1]);
-        }
-        // no code here
-    }
     #else
-    for (int i = 1; i < WIDTH - 1; i++){
-        for (int j = 1; j < HEIGHT - 1; j++){
-            H[i][j] = K[i][j][2] * H[i][j] + K[i][j][3] * (E[i][j + 1][0] - E[i][j][0] + E[i][j][1] - E[i + 1][j][1]);
+        # if defined(USE_OMP)
+            #pragma omp parallel for schedule(static, 83300) collapse(2)
+        # endif
+        for (int i = 1; i < WIDTH - 1; i++) {
+            for (int j = 1; j < HEIGHT - 1; j++) { 
+                H[i][j] = K[i][j][2] * H[i][j] + K[i][j][3] * (E[i][j + 1][0] - E[i][j][0] + E[i][j][1] - E[i + 1][j][1]);
+            }
+            // no code here
         }
-    }
     #endif
 }
 
@@ -96,7 +89,8 @@ int main (void){
     init_sdl();
 
     puts ("sdl initialized");
-    // draw circular lense
+
+    // draw circular lense on material
     for (int i = 0; i < WIDTH - 1; i++){
         for (int j = 0; j < HEIGHT - 1; j++){
             if (sqrt(powf64(i - (WIDTH / 2), 2) + powf64(j - (HEIGHT / 2), 2)) < 50){
@@ -145,9 +139,12 @@ int main (void){
     double t = get_time();
     while (1) {
         k++;
+        // SOURCE
+        // sinusoidal source
         H[150][400] = sin(k / 20.0f) * 30.0f;
-        // modify magnetic field and copy it to the gpu
+        // gaussian impulse
         // H[150][400] = powf64(2.718, -(powf64(k - 60, 2) / 100)) * 100;
+
         printf("%f\n", H[150][400]);
         #if defined(USE_CUDA)
             vuda::memcpy(dev_H, H, WIDTH * HEIGHT * sizeof(double), cudaMemcpyHostToDevice);
