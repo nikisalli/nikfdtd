@@ -2,7 +2,7 @@
 
 #version 450 core
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 layout( constant_id = 0 ) const uint DIM = 800;
 
@@ -11,8 +11,8 @@ layout(set = 0, binding = 1) buffer Eb { double E[800][800][2]; };
 layout(set = 0, binding = 2) readonly buffer Kb { double K[800][800][4]; };
 
 void main (void){
-    uint i = gl_WorkGroupID.x;
-    uint j = gl_WorkGroupID.y;
+    uint i = gl_GlobalInvocationID.x;
+    uint j = gl_GlobalInvocationID.y;
     E[i][j][0] = K[i][j][0] * E[i][j][0] + K[i][j][1] * (H[i][j] - H[i][j - 1]);
     E[i][j][1] = K[i][j][0] * E[i][j][1] + K[i][j][1] * (H[i - 1][j] - H[i][j]);
 }

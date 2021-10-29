@@ -2,7 +2,7 @@
 
 #version 450 core
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 layout( constant_id = 0 ) const uint DIM = 800;
 
@@ -50,8 +50,8 @@ vec3 m(float v){
 }
 
 void main (void){
-    uint i = gl_WorkGroupID.x;
-    uint j = gl_WorkGroupID.y;
+    uint i = gl_GlobalInvocationID.x;
+    uint j = gl_GlobalInvocationID.y;
     H[i][j] = K[i][j][2] * H[i][j] + K[i][j][3] * (E[i][j + 1][0] - E[i][j][0] + E[i][j][1] - E[i + 1][j][1]);
 
     vec3 bytes = jet(float(H[i][j]));

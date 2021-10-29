@@ -36,7 +36,7 @@ void precompute_material (EM_field *f){
 
 void E_step (EM_field* f, double* dev_H, double* dev_E, double* dev_K, uint32_t* dev_out){
     #if defined(USE_CUDA)
-        vuda::dim3 grid(WIDTH, HEIGHT);
+        vuda::dim3 grid(WIDTH / 16, HEIGHT / 16);
         vuda::launchKernel("E.spv", "main", 0, grid, HEIGHT, dev_H, dev_E, dev_K, dev_out);
         // cudaMemcpy(E, dev_E, WIDTH * HEIGHT * 2 * sizeof(double), cudaMemcpyDeviceToHost);  // E is a 2-dimensional vector
     #else
@@ -55,7 +55,7 @@ void E_step (EM_field* f, double* dev_H, double* dev_E, double* dev_K, uint32_t*
 
 void H_step (EM_field* f, double* dev_H, double* dev_E, double* dev_K, uint32_t* dev_out){
     #if defined(USE_CUDA)
-        vuda::dim3 grid(WIDTH, HEIGHT);
+        vuda::dim3 grid(WIDTH / 16, HEIGHT / 16);
         vuda::launchKernel("H.spv", "main", 0, grid, HEIGHT, dev_H, dev_E, dev_K, dev_out);
         vuda::memcpy(f->out, dev_out, WIDTH * HEIGHT * sizeof(uint32_t), cudaMemcpyDeviceToHost);
     #else
@@ -88,6 +88,8 @@ int main (void){
     double* dev_K = nullptr;
     uint32_t* dev_out = nullptr;
 
+    float fps;
+
     init_sdl();
 
     puts ("sdl initialized");
@@ -99,6 +101,17 @@ int main (void){
                 field->mat[i][j].epsilon = 2e-11;
                 // mymat[i][j].mu = 1.5e-6;
                 // mymat[i][j].sigma = 0.001;
+            }
+        }
+    }
+
+    // draw parabolic reflector
+    for (int i = 0; i < WIDTH - 1; i++){
+        for (int j = 0; j < HEIGHT - 1; j++){
+            if (i < powf64(j - 400, 2) * 0.001 + 100){
+                // field->mat[i][j].epsilon = 2e-12;
+                field->mat[i][j].mu = 10;
+                // field->mat[i][j].sigma = 0.001;
             }
         }
     }
@@ -155,23 +168,16 @@ int main (void){
         #if defined(USE_CUDA)
             vuda::memcpy(field->H, dev_H, WIDTH * HEIGHT * sizeof(double), cudaMemcpyDeviceToHost);
         #endif
-        // draw parabolic reflector
-        // printf("%d\n", k);
-        for (int i = 0; i < WIDTH - 1; i++){
-            for (int j = 0; j < HEIGHT - 1; j++){
-                if (i < powf64(j - 400, 2) * 0.001 + 100){
-                    field->H[i][j] = 0;
-                    field->E[i][j][0] = 0;
-                    field->E[i][j][1] = 0;
-                }
-            }
-        }
-        draw_field(field);
 
+        if (k % 3 == 0){
+            draw_field(field);
+        }
+        
         if (poll_quit())
             break;
 
-        printf("%ffps\n", 1000.0 / (get_time() - t));
+        fps -= (fps - (1000.0 / (get_time() - t))) * 0.01;
+        printf("%ffps\n", fps);
         t = get_time();
     }
     #if defined(USE_CUDA)
