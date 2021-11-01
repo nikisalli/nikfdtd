@@ -66,3 +66,43 @@ void stop_sdl (){
 bool poll_quit (){
     return SDL_PollEvent(&event) && event.type == SDL_QUIT;
 }
+
+void draw_circle (EM_field* f, material mymat, int center_x, int center_y, int radius){
+    for (int i = 0; i < WIDTH; i++){
+        for (int j = 0; j < HEIGHT; j++){
+            if (sqrt(powf64(i - center_x, 2) + powf64(j - center_y, 2)) < radius){
+                f->mat[i][j] = mymat;
+            }
+        }
+    }
+}
+
+void draw_rect (EM_field* f, material mymat, int start_x, int start_y, int width, int height){
+    for (int i = 0; i < WIDTH; i++){
+        for (int j = 0; j < HEIGHT; j++){
+            if (i > start_x && i < start_x + width && j > start_y && j < start_y + height){
+                f->mat[i][j] = mymat;
+            }
+        }
+    }
+}
+
+void draw_from_img (EM_field* f, material mymat, char path[300]){
+    cv::String mypath = cv::String(path);
+    cv::Mat im = cv::imread(mypath);
+    cv::Mat gim;
+    cv::cvtColor(im, gim, cv::COLOR_BGR2GRAY);
+
+    if (im.cols != WIDTH || im.rows != HEIGHT){
+        printf("Image size is not equal to field size!\n");
+        return;
+    }
+
+    for (int i = 0; i < WIDTH; i++){
+        for (int j = 0; j < HEIGHT; j++){
+            if (gim.at<uchar>(j, i) < 10){
+                f->mat[i][j] = mymat;
+            }
+        }
+    }
+}

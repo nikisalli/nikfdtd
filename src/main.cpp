@@ -13,8 +13,8 @@ void initialize_field(EM_field *f){
     for(int i = 0; i < WIDTH; i++){
         for(int j = 0; j < HEIGHT; j++){
             f->H[i][j] = 0.0;
-            f->E[i][j][0] = 0.0;
-            f->E[i][j][1] = 0.0;
+            f->E[0][i][j] = 0.0;
+            f->E[1][i][j] = 0.0;
             f->mat[i][j] = vacuum;
         }
     }
@@ -25,11 +25,11 @@ void precompute_material (EM_field *f){
         for (int j = 0; j < HEIGHT; j++){
             double temp;
             temp = (f->mat[i][j].sigma * TIME_STEP) / (f->mat[i][j].epsilon * 2);
-            f->K[i][j][0] = (1 - temp) / (1 + temp);  // Ca
-            f->K[i][j][1] = (TIME_STEP / (f->mat[i][j].epsilon * GRID_CELL_SIZE)) / (1 + temp);  // Cb 
+            f->K[0][i][j] = (1 - temp) / (1 + temp);  // Ca
+            f->K[1][i][j] = (TIME_STEP / (f->mat[i][j].epsilon * GRID_CELL_SIZE)) / (1 + temp);  // Cb 
             temp = (f->mat[i][j].sigma * TIME_STEP) / (f->mat[i][j].mu * 2);
-            f->K[i][j][2] = (1 - temp) / (1 + temp);  // Da
-            f->K[i][j][3] = (TIME_STEP / (f->mat[i][j].mu * GRID_CELL_SIZE)) / (1 + temp);  // Db
+            f->K[2][i][j] = (1 - temp) / (1 + temp);  // Da
+            f->K[3][i][j] = (TIME_STEP / (f->mat[i][j].mu * GRID_CELL_SIZE)) / (1 + temp);  // Db
         }
     }
 }
@@ -37,7 +37,7 @@ void precompute_material (EM_field *f){
 void E_step (EM_field* f, double* dev_H, double* dev_E, double* dev_K, uint32_t* dev_out){
     #if defined(USE_CUDA)
         vuda::dim3 grid(WIDTH / 16, HEIGHT / 16);
-        vuda::launchKernel("E.spv", "main", 0, grid, HEIGHT, dev_H, dev_E, dev_K, dev_out);
+        vuda::launchKernel("E.spv", "main", 0, grid, WIDTH, HEIGHT, dev_H, dev_E, dev_K, dev_out);
         // cudaMemcpy(E, dev_E, WIDTH * HEIGHT * 2 * sizeof(double), cudaMemcpyDeviceToHost);  // E is a 2-dimensional vector
     #else
         # if defined(USE_OMP)
@@ -45,8 +45,8 @@ void E_step (EM_field* f, double* dev_H, double* dev_E, double* dev_K, uint32_t*
         # endif
         for (int i = 1; i < WIDTH; i++) {
             for (int j = 1; j < HEIGHT; j++) { 
-                f->E[i][j][0] = f->K[i][j][0] * f->E[i][j][0] + f->K[i][j][1] * (f->H[i][j] - f->H[i][j - 1]);
-                f->E[i][j][1] = f->K[i][j][0] * f->E[i][j][1] + f->K[i][j][1] * (f->H[i - 1][j] - f->H[i][j]);
+                f->E[0][i][j] = f->K[0][i][j] * f->E[0][i][j] + f->K[1][i][j] * (f->H[i][j] - f->H[i][j - 1]);
+                f->E[1][i][j] = f->K[0][i][j] * f->E[1][i][j] + f->K[1][i][j] * (f->H[i - 1][j] - f->H[i][j]);
             }
             // no code here
         }
@@ -56,7 +56,7 @@ void E_step (EM_field* f, double* dev_H, double* dev_E, double* dev_K, uint32_t*
 void H_step (EM_field* f, double* dev_H, double* dev_E, double* dev_K, uint32_t* dev_out){
     #if defined(USE_CUDA)
         vuda::dim3 grid(WIDTH / 16, HEIGHT / 16);
-        vuda::launchKernel("H.spv", "main", 0, grid, HEIGHT, dev_H, dev_E, dev_K, dev_out);
+        vuda::launchKernel("H.spv", "main", 0, grid, WIDTH, HEIGHT, dev_H, dev_E, dev_K, dev_out);
         vuda::memcpy(f->out, dev_out, WIDTH * HEIGHT * sizeof(uint32_t), cudaMemcpyDeviceToHost);
     #else
         # if defined(USE_OMP)
@@ -64,7 +64,7 @@ void H_step (EM_field* f, double* dev_H, double* dev_E, double* dev_K, uint32_t*
         # endif
         for (int i = 1; i < WIDTH - 1; i++) {
             for (int j = 1; j < HEIGHT - 1; j++) { 
-                f->H[i][j] = f->K[i][j][2] * f->H[i][j] + f->K[i][j][3] * (f->E[i][j + 1][0] - f->E[i][j][0] + f->E[i][j][1] - f->E[i + 1][j][1]);
+                f->H[i][j] = f->K[2][i][j] * f->H[i][j] + f->K[3][i][j] * (f->E[0][i][j + 1] - f->E[0][i][j] + f->E[1][i][j] - f->E[1][i + 1][j]);
             }
             // no code here
         }
@@ -80,7 +80,7 @@ double get_time (){
 
 int main (void){
     EM_field* field = (EM_field*)malloc(sizeof(EM_field));
-    initialize_field(field);
+    initialize_field (field);
 
     // gpu buffers
     double* dev_H = nullptr;
@@ -90,31 +90,43 @@ int main (void){
 
     float fps;
 
-    init_sdl();
+    init_sdl ();
 
     puts ("sdl initialized");
 
+    // example materials
+    material optical_fiber { .epsilon = 3.6e-11, .sigma = 0 };
+    material vacuum {};
+
+    const int wwidth = 30;
+    draw_rect (field, optical_fiber, 0, HEIGHT / 2 - wwidth / 2, WIDTH, wwidth);
+
+    const int radius = 107;
+    const int dist = -30;
+    draw_circle (field, optical_fiber, WIDTH / 4, HEIGHT / 2 - wwidth / 2 - wwidth - dist - radius, radius);
+    draw_circle (field, vacuum, WIDTH / 4, HEIGHT / 2 - wwidth / 2 - wwidth - dist - radius, radius - wwidth);
+
     // draw circular lense on material
-    for (int i = 0; i < WIDTH - 1; i++){
-        for (int j = 0; j < HEIGHT - 1; j++){
-            if (sqrt(powf64(i - (WIDTH / 2), 2) + powf64(j - (HEIGHT / 2), 2)) < 50){
-                field->mat[i][j].epsilon = 2e-11;
-                // mymat[i][j].mu = 1.5e-6;
-                // mymat[i][j].sigma = 0.001;
-            }
-        }
-    }
+    // for (int i = 0; i < WIDTH - 1; i++){
+    //     for (int j = 0; j < HEIGHT - 1; j++){
+    //         if (sqrt(powf64(i - (WIDTH / 2), 2) + powf64(j - (HEIGHT / 2), 2)) < 50){
+    //             field->mat[i][j].epsilon = 2e-11;
+    //             // mymat[i][j].mu = 1.5e-6;
+    //             // mymat[i][j].sigma = 0.001;
+    //         }
+    //     }
+    // }
 
     // draw parabolic reflector
-    for (int i = 0; i < WIDTH - 1; i++){
-        for (int j = 0; j < HEIGHT - 1; j++){
-            if (i < powf64(j - 400, 2) * 0.001 + 100){
-                // field->mat[i][j].epsilon = 2e-12;
-                field->mat[i][j].mu = 10;
-                // field->mat[i][j].sigma = 0.001;
-            }
-        }
-    }
+    // for (int i = 0; i < WIDTH - 1; i++){
+    //     for (int j = 0; j < HEIGHT - 1; j++){
+    //         if (i < powf64(j - 400, 2) * 0.001 + 100){
+    //             // field->mat[i][j].epsilon = 2e-12;
+    //             field->mat[i][j].mu = 10;
+    //             // field->mat[i][j].sigma = 0.001;
+    //         }
+    //     }
+    // }
 
     precompute_material(field);
     puts ("init done");
@@ -156,10 +168,12 @@ int main (void){
         k++;
         // SOURCE
         // sinusoidal source
-        field->H[150][400] = sin(k / 20.0f) * 30.0f;
+        // field->H[150][400] = sin(k / 20.0f) * 30.0f;
         // gaussian impulse
         // H[150][400] = powf64(2.718, -(powf64(k - 60, 2) / 100)) * 100;
-
+        for (int i = 3; i < wwidth - 3; i++){
+            field->H[0][HEIGHT / 2 - wwidth / 2 + i] = sin(k / 30.0f) * 10.0f;
+        }
         #if defined(USE_CUDA)
             vuda::memcpy(dev_H, field->H, WIDTH * HEIGHT * sizeof(double), cudaMemcpyHostToDevice);
         #endif

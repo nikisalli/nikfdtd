@@ -4,12 +4,13 @@
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-layout( constant_id = 0 ) const uint DIM = 800;
+layout( constant_id = 0 ) const uint DIM_X = 1024;
+layout( constant_id = 1 ) const uint DIM_Y = 1024;
 
-layout(set = 0, binding = 0) buffer Hb { double H[800][800]; };
-layout(set = 0, binding = 1) readonly buffer Eb { double E[800][800][2]; };
-layout(set = 0, binding = 2) readonly buffer Kb { double K[800][800][4]; };
-layout(set = 0, binding = 3) writeonly buffer p_out { uint p[800][800]; };
+layout(set = 0, binding = 0) buffer Hb { double H[]; };
+layout(set = 0, binding = 1) readonly buffer Eb { double E[]; };
+layout(set = 0, binding = 2) readonly buffer Kb { double K[]; };
+layout(set = 0, binding = 3) writeonly buffer p_out { uint p[]; };
 
 vec3 jet(float v){
     vec3 c = vec3(1, 1, 1);
@@ -49,11 +50,17 @@ vec3 m(float v){
     return c;
 }
 
+uint o(uint v, uint i, uint j){
+    return v * DIM_X * DIM_Y + i * DIM_X + j;
+}
+
 void main (void){
     uint i = gl_GlobalInvocationID.x;
     uint j = gl_GlobalInvocationID.y;
-    H[i][j] = K[i][j][2] * H[i][j] + K[i][j][3] * (E[i][j + 1][0] - E[i][j][0] + E[i][j][1] - E[i + 1][j][1]);
 
-    vec3 bytes = jet(float(H[i][j]));
-    p[j][i] = (uint(bytes.b * 255) << 16) | (uint(bytes.g * 255) << 8) | uint(bytes.r * 255) | 0xFF000000;
+    H[o(0,i,j)] = K[o(2,i,j)] * H[o(0,i,j)] + K[o(3,i,j)] * (E[o(0,i,j + 1)] - E[o(0,i,j)] + E[o(1,i,j)] - E[o(1,i + 1,j)]);
+    // H[i][j] = K[2][i][j] * H[i][j] + K[3][i][j] * (E[0][i][j + 1] - E[0][i][j] + E[1][i][j] - E[1][i + 1][j]);
+
+    vec3 bytes = jet(float(H[o(0,i,j)]));
+    p[o(0,j,i)] = (uint(bytes.b * 255) << 16) | (uint(bytes.g * 255) << 8) | uint(bytes.r * 255) | 0xFF000000;
 }

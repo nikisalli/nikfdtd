@@ -9,9 +9,9 @@ typedef struct material{
 
 typedef struct EM_field{
     double H[WIDTH][HEIGHT] = {};
-    double E[WIDTH][HEIGHT][2] = {};
+    double E[2][WIDTH][HEIGHT] = {};
     material mat[WIDTH][HEIGHT] = {};
-    double K[WIDTH][HEIGHT][4] = {};  // precomputed constant values Ca Cb Da Db
+    double K[4][WIDTH][HEIGHT] = {};  // precomputed constant values Ca Cb Da Db
     uint32_t out[WIDTH][HEIGHT] = {}; // pixel array
 } EM_field;
 
