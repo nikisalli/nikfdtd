@@ -41,6 +41,6 @@ void destroy_field          (simulation* s);
 // drawing functions
 void draw_circle    (simulation* s, material mymat, int center_x, int center_y, int radius);
 void draw_rect      (simulation* s, material mymat, int start_x, int start_y, int width, int height);
-void draw_from_img  (simulation* s, material mymat, char path[300]);
+void draw_from_img  (simulation* s, material mymat, const char path[300]);
 
 #endif

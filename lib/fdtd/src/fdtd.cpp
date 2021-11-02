@@ -107,7 +107,7 @@ void draw_rect (simulation* s, material mymat, int start_x, int start_y, int wid
     }
 }
 
-void draw_from_img (simulation* s, material mymat, char path[300]){
+void draw_from_img (simulation* s, material mymat, const char path[300]){
     cv::String mypath = cv::String(path);
     cv::Mat im = cv::imread(mypath);
     cv::Mat gim;
