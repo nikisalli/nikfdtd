@@ -38,7 +38,12 @@ function(add_spirv_shader INPUT_FILE OUTPUT_FILE)
     )
 endfunction()
 
-add_spirv_shader(${CMAKE_SOURCE_DIR}/src/kernel_H.comp H.spv)
-add_spirv_shader(${CMAKE_SOURCE_DIR}/src/kernel_E.comp E.spv)
+add_spirv_shader(${CMAKE_CURRENT_SOURCE_DIR}/src/kernel_H.comp H.spv)
+add_spirv_shader(${CMAKE_CURRENT_SOURCE_DIR}/src/kernel_E.comp E.spv)
 
 target_include_directories (fdtd PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+add_custom_command(TARGET fdtd POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/E.spv ${CMAKE_SOURCE_DIR}/bin/E.spv
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/H.spv ${CMAKE_SOURCE_DIR}/bin/H.spv
+)

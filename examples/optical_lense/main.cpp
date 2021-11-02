@@ -13,6 +13,12 @@ int main (void){
     // initialize the simulation and create the window
     init_simulation(&sim);
 
+    // ##### MATERIAL DEFINITIONS #####
+    material glass { .epsilon = 3.6e-11, .sigma = 0 };
+
+    // draw parabolic reflector
+    draw_circle (&sim, glass, sim.width / 2, sim.height / 2, 100);
+
     // load materials
     init_materials(&sim);
 
@@ -20,7 +26,7 @@ int main (void){
 
     while(1){
         // simple gaussian impulse
-        sim.field->H[o(&sim,0,512,512)] = sin(sim.it / 20.0f) * 30.0f;
+        sim.field->H[o(&sim,0,100,512)] = powf64(2.718, -(powf64(sim.it - 100, 2) / 1000)) * 100;
 
         // step the simulation
         step(&sim);

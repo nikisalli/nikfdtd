@@ -13,6 +13,18 @@ int main (void){
     // initialize the simulation and create the window
     init_simulation(&sim);
 
+    // ##### MATERIAL DEFINITIONS #####
+    material reflector { .mu = 10 };
+
+    // draw parabolic reflector
+    for (int i = 0; i < sim.width - 1; i++){
+        for (int j = 0; j < sim.height - 1; j++){
+            if (i < powf64(j - 512, 2) * 0.001 + 100){
+                sim.field->mat[o(&sim,0,i,j)] = reflector;
+            }
+        }
+    }
+
     // load materials
     init_materials(&sim);
 
@@ -20,7 +32,7 @@ int main (void){
 
     while(1){
         // simple gaussian impulse
-        sim.field->H[o(&sim,0,512,512)] = sin(sim.it / 20.0f) * 30.0f;
+        sim.field->H[o(&sim,0,350,512)] = powf64(2.718, -(powf64(sim.it - 100, 2) / 1000)) * 100;
 
         // step the simulation
         step(&sim);

@@ -2,7 +2,7 @@
 #define MY_STRUCTURES
 
 typedef struct material{
-    double mu = 1.25663706212e-6, epsilon = 8.854187817620e-12, sigma = 0.001;
+    double mu = 1.25663706212e-6, epsilon = 8.854187817620e-12, sigma = 0;
 } material;
 
 typedef struct EM_field{
