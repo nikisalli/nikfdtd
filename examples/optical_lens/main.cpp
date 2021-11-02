@@ -16,7 +16,7 @@ int main (void){
     // ##### MATERIAL DEFINITIONS #####
     material glass { .epsilon = 3.6e-11, .sigma = 0 };
 
-    // draw parabolic reflector
+    // draw lens
     draw_circle (&sim, glass, sim.width / 2, sim.height / 2, 100);
 
     // load materials
