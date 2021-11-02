@@ -1,10 +1,20 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(fdtd LANGUAGES CXX)
 
-enable_testing()
+set (FDTD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set (FDTD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-include_directories(${PROJECT_SOURCE_DIR})
-add_executable(fdtd main.cpp draw.cpp kernel_H.comp kernel_E.comp)
+set(FDTD_SRCS 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/fdtd.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/draw.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/kernel_E.comp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/kernel_H.comp
+)
+
+include_directories("${FDTD_SOURCE_DIR}")
+include_directories("${FDTD_INCLUDE_DIR}")
+
+add_library(fdtd SHARED ${FDTD_SRCS} ${FDTD_INCLUDE_DIR})
 
 find_package(SDL2 REQUIRED)
 find_package(OpenMP)
@@ -28,6 +38,7 @@ function(add_spirv_shader INPUT_FILE OUTPUT_FILE)
     )
 endfunction()
 
-
 add_spirv_shader(${CMAKE_SOURCE_DIR}/src/kernel_H.comp H.spv)
 add_spirv_shader(${CMAKE_SOURCE_DIR}/src/kernel_E.comp E.spv)
+
+target_include_directories (fdtd PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
