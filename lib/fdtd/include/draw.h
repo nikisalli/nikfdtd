@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <data_structures.h>
+#include <omp.h>
 
 typedef struct color{
     double r,g,b;
@@ -24,7 +25,7 @@ uint32_t o(plotter* s, uint32_t v, uint32_t i, uint32_t j);
 // plotting functions
 void init_plotter   (plotter** p, int width, int height);
 void init_sdl       (plotter* p);
-void draw_field     (plotter* p, EM_field* f, bool gpu);
+void draw_field     (plotter* p, EM_field* f, bool use_gpu);
 void stop_sdl       (plotter* p);
 bool poll_quit      (plotter* p);
 void destroy_plotter(plotter** p);

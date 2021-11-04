@@ -11,6 +11,12 @@
 #include <data_structures.h>
 #include <opencv2/opencv.hpp>
 
+typedef struct source{
+    uint16_t x;
+    uint16_t y;
+    float value;
+} source;
+
 typedef struct simulation{
     int width;
     int height;
@@ -18,12 +24,19 @@ typedef struct simulation{
     double time_step;
     bool use_gpu;
     EM_field* field;
+    // gpu buffers
     double* dev_H = nullptr;
     double* dev_E = nullptr;
     double* dev_K = nullptr;
     uint32_t* dev_out = nullptr;
+    // plotter
     plotter* p;
+    // iteration number
     uint64_t it = 0;
+    // sources
+    source* dev_sources = nullptr;
+    source sources[4096];
+    uint16_t num_sources = 0;
 } simulation;
 
 uint64_t o(simulation* s, uint32_t i, uint32_t j, uint32_t k);
@@ -31,10 +44,13 @@ uint64_t o(simulation* s, uint32_t i, uint32_t j, uint32_t k);
 void init_simulation        (simulation* s);
 void init_field             (simulation* s);
 void init_materials         (simulation* s);
+
 void step                   (simulation* s);
 void E_step                 (simulation* s);
 void H_step                 (simulation* s);
-void plot                   (simulation* s);   
+void plot                   (simulation* s);
+void update_sources         (simulation* s);
+
 void destroy_simulation     (simulation* s);
 void destroy_field          (simulation* s);
 

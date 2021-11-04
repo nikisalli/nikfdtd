@@ -16,11 +16,15 @@ int main (void){
     // load materials
     init_materials(&sim);
 
+    //           x    y  initial value
+    source src {512, 512, 0.0};
+    sim.sources[0] = src;
+
     puts ("init done");
 
     while(1){
         // simple gaussian impulse
-        sim.field->H[o(&sim,0,512,512)] = sin(sim.it / 20.0f) * 30.0f;
+        sim.sources[0].value = sin(sim.it / 20.0f) * 30.0f;
 
         // step the simulation
         step(&sim);

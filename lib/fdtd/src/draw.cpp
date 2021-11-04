@@ -43,29 +43,28 @@ void init_sdl (plotter* p){
     SDL_RenderClear (p->renderer);
 }
 
-void draw_field(plotter* p, EM_field* f, bool gpu){
-    if(gpu){
-        SDL_Surface *surface = SDL_CreateRGBSurfaceFrom (f->out, p->width, p->height, 32, p->width * 4, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
-        SDL_Texture *texture = SDL_CreateTextureFromSurface (p->renderer, surface);
-        SDL_RenderCopy (p->renderer, texture, NULL, NULL);
-        SDL_RenderPresent (p->renderer);
-        SDL_FreeSurface (surface);
-        SDL_DestroyTexture (texture);
-    } else {
+void draw_field(plotter* p, EM_field* f, bool use_gpu){
+    if (!use_gpu) {
+        #pragma omp parallel
         for (int i = 0; i < p->width; i++){
+            #pragma omp for nowait
             for (int j = 0; j < p->height; j++){
-                color c = jet(f->H[o(p, 0, i, j)]);
-                SDL_SetRenderDrawColor(p->renderer, c.r * 255, c.g * 255, c.b * 255, 255);
-                SDL_RenderDrawPoint (p->renderer, i, j);
+                color bytes = jet(f->H[o(p, 0, i, j)]);
+                f->out[o(p, 0, i, j)] = (uint(bytes.b * 255) << 16) | (uint(bytes.g * 255) << 8) | uint(bytes.r * 255) | 0xFF000000;
             }
         }
-        SDL_RenderPresent (p->renderer);
     }
+    SDL_Surface* surface = SDL_CreateRGBSurfaceFrom (f->out, p->width, p->height, 32, p->width * 4, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface (p->renderer, surface);
+    SDL_RenderCopy (p->renderer, texture, NULL, NULL);
+    SDL_RenderPresent (p->renderer);
+    SDL_FreeSurface (surface);
+    SDL_DestroyTexture (texture);
 }
 
 void stop_sdl (plotter* p){
-    SDL_DestroyRenderer(p->renderer);
-    SDL_DestroyWindow(p->window);
+    SDL_DestroyRenderer (p->renderer);
+    SDL_DestroyWindow (p->window);
     SDL_Quit();
 }
 

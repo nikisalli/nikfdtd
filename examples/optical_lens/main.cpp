@@ -22,11 +22,14 @@ int main (void){
     // load materials
     init_materials(&sim);
 
+    source src {100, 512, 0.0};
+    sim.sources[0] = src;
+
     puts ("init done");
 
     while(1){
         // simple gaussian impulse
-        sim.field->H[o(&sim,0,100,512)] = powf64(2.718, -(powf64(sim.it - 100, 2) / 1000)) * 100;
+        sim.sources[0].value = powf64(2.718, -(powf64(sim.it - 100, 2) / 1000)) * 100;
 
         // step the simulation
         step(&sim);

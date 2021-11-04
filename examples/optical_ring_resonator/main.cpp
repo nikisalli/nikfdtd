@@ -11,8 +11,8 @@ double get_time (){
 int main (void){
     // setup the simulation
     simulation sim;
-    sim.height = 1024;
-    sim.width = 1024;
+    sim.height = 800;
+    sim.width = 800;
     sim.use_gpu = true;
     sim.time_step = 1e-12;
     sim.grid_cell_size = 1e-3;
@@ -35,21 +35,27 @@ int main (void){
     // load materials
     init_materials(&sim);
 
+    // ##### SOURCE DEFINITIONS #####
+    for (int i = 0; i < wwidth - 6; i++){
+        source src {1, sim.height / 2 - wwidth / 2 + 3 + i, 0.0};
+        sim.sources[i] = src;
+    }
+
     puts ("init done");
 
     double fps;
     double t = get_time();
     while(1){
         // simple sinusoidal source
-        for (int i = 3; i < wwidth - 3; i++){
-            sim.field->H[o(&sim, 0, 1, sim.height / 2 - wwidth / 2 + i)] = sin(sim.it / 30.0f) * 10.0f;
+        for (int i = 0; i < wwidth - 6; i++){
+            sim.sources[i].value = sin(sim.it / 30.0f) * 10.0f;
         }
 
         // step the simulation
         step(&sim);
 
-        // plot one time over 3 steps to make everything faster
-        if (sim.it % 3 == 0){
+        // plot one time over 6 steps to make everything faster
+        if (sim.it % 6 == 0){
             plot(&sim);
         }
 

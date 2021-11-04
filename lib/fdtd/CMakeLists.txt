@@ -9,6 +9,7 @@ set(FDTD_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/draw.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/kernel_E.comp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/kernel_H.comp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/sources.comp
 )
 
 include_directories("${FDTD_SOURCE_DIR}")
@@ -40,10 +41,12 @@ endfunction()
 
 add_spirv_shader(${CMAKE_CURRENT_SOURCE_DIR}/src/kernel_H.comp H.spv)
 add_spirv_shader(${CMAKE_CURRENT_SOURCE_DIR}/src/kernel_E.comp E.spv)
+add_spirv_shader(${CMAKE_CURRENT_SOURCE_DIR}/src/sources.comp S.spv)
 
 target_include_directories (fdtd PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_custom_command(TARGET fdtd POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/E.spv ${CMAKE_SOURCE_DIR}/bin/E.spv
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/H.spv ${CMAKE_SOURCE_DIR}/bin/H.spv
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/S.spv ${CMAKE_SOURCE_DIR}/bin/S.spv
 )

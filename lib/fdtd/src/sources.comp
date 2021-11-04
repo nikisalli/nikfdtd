@@ -1,0 +1,30 @@
+// H step kernel
+
+#version 450 core
+
+struct source {
+    uint pos;
+    float value;
+};
+
+layout(local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
+
+layout( constant_id = 0 ) const uint DIM_X = 1024;
+layout( constant_id = 1 ) const uint DIM_Y = 1024;
+
+layout(set = 0, binding = 0) writeonly buffer Hb { double H[]; };
+layout(set = 0, binding = 1) readonly buffer sources { source s[4096]; };
+
+uint o(uint v, uint i, uint j){
+    return v * DIM_X * DIM_Y + i * DIM_X + j;
+}
+
+void main (void){
+    uint i = gl_GlobalInvocationID.x;
+
+    uint x = s[i].pos & 0xFFFF;
+    uint y = s[i].pos >> 16;
+    if (x < 65535 && y < 65535) {
+        H[o(0,x,y)] = s[i].value;
+    }
+}

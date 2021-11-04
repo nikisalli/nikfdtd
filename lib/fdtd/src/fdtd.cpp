@@ -45,9 +45,11 @@ void init_materials (simulation* s){
     }
 
     // copy computed materials to gpu
-    vuda::memcpy(s->dev_H, s->field->H, s->width * s->height * sizeof(double), cudaMemcpyHostToDevice);  // H is a 1-dimensional vector
-    vuda::memcpy(s->dev_E, s->field->E, s->width * s->height * 2 * sizeof(double), cudaMemcpyHostToDevice);  // E is a 2-dimensional vector
-    vuda::memcpy(s->dev_K, s->field->K, s->width * s->height * 4 * sizeof(double), cudaMemcpyHostToDevice);  // K is a 4-dimensional vector
+    if (s->use_gpu){
+        vuda::memcpy(s->dev_H, s->field->H, s->width * s->height * sizeof(double), cudaMemcpyHostToDevice);  // H is a 1-dimensional vector
+        vuda::memcpy(s->dev_E, s->field->E, s->width * s->height * 2 * sizeof(double), cudaMemcpyHostToDevice);  // E is a 2-dimensional vector
+        vuda::memcpy(s->dev_K, s->field->K, s->width * s->height * 4 * sizeof(double), cudaMemcpyHostToDevice);  // K is a 4-dimensional vector
+    }
 }
 
 void E_step (simulation* s){
@@ -56,10 +58,9 @@ void E_step (simulation* s){
         vuda::launchKernel("E.spv", "main", 0, grid, s->width, s->height, s->dev_H, s->dev_E, s->dev_K, s->dev_out);
         // cudaMemcpy(E, dev_E, s->width * s->height * 2 * sizeof(double), cudaMemcpyDeviceToHost);  // E is a 2-dimensional vector
     } else {
-        # if defined(USE_OMP)
-            #pragma omp parallel for schedule(static, 83300) collapse(2)
-        # endif
+        #pragma omp parallel
         for (int i = 1; i < s->width; i++) {
+            #pragma omp for nowait
             for (int j = 1; j < s->height; j++) { 
                 s->field->E[o(s,0,i,j)] = s->field->K[o(s,0,i,j)] * s->field->E[o(s,0,i,j)] + s->field->K[o(s,1,i,j)] * (s->field->H[o(s,0,i,j)] - s->field->H[o(s,0,i,j - 1)]);
                 s->field->E[o(s,1,i,j)] = s->field->K[o(s,0,i,j)] * s->field->E[o(s,1,i,j)] + s->field->K[o(s,1,i,j)] * (s->field->H[o(s,0,i - 1,j)] - s->field->H[o(s,0,i,j)]);
@@ -72,13 +73,12 @@ void E_step (simulation* s){
 void H_step (simulation* s){
     if (s->use_gpu){
         vuda::dim3 grid(s->width / 16, s->height / 16);
-        vuda::launchKernel("H.spv", "main", 0, grid, s->width, s->height, s->dev_H, s->dev_E, s->dev_K, s->dev_out);
+        vuda::launchKernel("H.spv", "main", 0, grid, s->width, s->height, s->dev_H, s->dev_E, s->dev_K, s->dev_out, s->dev_sources);
         vuda::memcpy(s->field->out, s->dev_out, s->width * s->height * sizeof(uint32_t), cudaMemcpyDeviceToHost);
     } else {
-        # if defined(USE_OMP)
-            #pragma omp parallel for schedule(static, 83300) collapse(2)
-        # endif
+        #pragma omp parallel
         for (int i = 1; i < s->width - 1; i++) {
+            #pragma omp for nowait
             for (int j = 1; j < s->height - 1; j++) { 
                 s->field->H[o(s,0,i,j)] = s->field->K[o(s,2,i,j)] * s->field->H[o(s,0,i,j)] + s->field->K[o(s,3,i,j)] * (s->field->E[o(s,0,i,j + 1)] - s->field->E[o(s,0,i,j)] + s->field->E[o(s,1,i,j)] - s->field->E[o(s,1,i + 1,j)]);
             }
@@ -129,12 +129,9 @@ void draw_from_img (simulation* s, material mymat, const char path[300]){
 
 void step (simulation* s){
     s->it++;
-    if(s->use_gpu)
-        vuda::memcpy(s->dev_H, s->field->H, s->width * s->height * sizeof(double), cudaMemcpyHostToDevice);
+    update_sources(s);
     H_step(s);
     E_step(s);
-    if(s->use_gpu)
-        vuda::memcpy(s->field->H, s->dev_H, s->width * s->height * sizeof(double), cudaMemcpyDeviceToHost);
 }
 
 void plot (simulation* s){
@@ -151,9 +148,13 @@ void init_simulation (simulation* s){
     s->dev_K = nullptr;
     s->dev_out = nullptr;
 
-    if(!s->use_gpu){
-        omp_set_num_threads(12);
-    } else {
+    // 65535 on x and y means not active
+    for (auto i : s->sources){
+        i.x = 65535;
+        i.y = 65535;
+    }
+
+    if(s->use_gpu){
         // enumerate devices
         int count;
         vuda::getDeviceCount (&count);
@@ -173,7 +174,15 @@ void init_simulation (simulation* s){
         vuda::malloc((void**)&(s->dev_E), s->width * s->height * 2 * sizeof(double));
         vuda::malloc((void**)&(s->dev_K), s->width * s->height * 4 * sizeof(double));
         vuda::malloc((void**)&(s->dev_out), s->width * s->height * sizeof(uint32_t));
+        vuda::malloc((void**)&(s->dev_sources), 4096 * sizeof(source));
+    } else {
+        omp_set_num_threads(12);
     }
+}
+
+void update_sources (simulation* s){
+    vuda::memcpy(s->dev_sources, s->sources, 4096 * sizeof(source), cudaMemcpyHostToDevice);
+    vuda::launchKernel("S.spv", "main", 0, 16, s->width, s->height, s->dev_H, s->dev_sources);
 }
 
 void destroy_simulation (simulation* s){
@@ -188,39 +197,3 @@ void destroy_simulation (simulation* s){
         vuda::free(s->dev_out);
     }
 }
-/*
-int main (void){
-
-
-    // draw circular lense on material
-    // for (int i = 0; i < s->width - 1; i++){
-    //     for (int j = 0; j < s->height - 1; j++){
-    //         if (sqrt(powf64(i - (s->width / 2), 2) + powf64(j - (s->height / 2), 2)) < 50){
-    //             field->mat[o(s,0,i,j)].epsilon = 2e-11;
-    //             // mymat[o(s,0,i,j)].mu = 1.5e-6;
-    //             // mymat[o(s,0,i,j)].sigma = 0.001;
-    //         }
-    //     }
-    // }
-
-    // draw parabolic reflector
-    // for (int i = 0; i < s->width - 1; i++){
-    //     for (int j = 0; j < s->height - 1; j++){
-    //         if (i < powf64(j - 400, 2) * 0.001 + 100){
-    //             // field->mat[o(s,0,i,j)].epsilon = 2e-12;
-    //             field->mat[o(s,0,i,j)].mu = 10;
-    //             // field->mat[o(s,0,i,j)].sigma = 0.001;
-    //         }
-    //     }
-    // }
-
-    while (1) {
-        // SOURCE
-        // sinusoidal source
-        // field->H[150][400] = sin(k / 20.0f) * 30.0f;
-        // gaussian impulse
-        // H[150][400] = powf64(2.718, -(powf64(k - 60, 2) / 100)) * 100;
-    }
-}
-
-*/

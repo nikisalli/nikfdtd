@@ -59,7 +59,6 @@ void main (void){
     uint j = gl_GlobalInvocationID.y;
 
     H[o(0,i,j)] = K[o(2,i,j)] * H[o(0,i,j)] + K[o(3,i,j)] * (E[o(0,i,j + 1)] - E[o(0,i,j)] + E[o(1,i,j)] - E[o(1,i + 1,j)]);
-
     // H[i][j] = K[2][i][j] * H[i][j] + K[3][i][j] * (E[0][i][j + 1] - E[0][i][j] + E[1][i][j] - E[1][i + 1][j]);
 
     vec3 bytes = jet(float(H[o(0,i,j)]));
