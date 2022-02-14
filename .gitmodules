@@ -1,3 +1,0 @@
-[submodule "lib/fdtd/include/vuda"]
-	path = lib/fdtd/include/vuda
-	url = https://github.com/nikisalli/fdtd.git
