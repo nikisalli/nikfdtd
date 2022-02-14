@@ -11,7 +11,7 @@ first clone the repo with:
 
 update submodules
 
-``` git submodule update --init ```
+``` git submodule update --init --remote ```
 
 create build dir
 
