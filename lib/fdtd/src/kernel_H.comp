@@ -12,6 +12,12 @@ layout(set = 0, binding = 1) readonly buffer Eb { double E[]; };
 layout(set = 0, binding = 2) readonly buffer Kb { double K[]; };
 layout(set = 0, binding = 3) writeonly buffer p_out { uint p[]; };
 
+struct color{
+    float r,g,b,a;
+};
+
+layout(set = 0, binding = 4) readonly buffer color_buffer { color c[]; };
+
 vec3 jet(float v){
     vec3 c = vec3(1, 1, 1);
     float dv, vmax = 1., vmin = -1.;
@@ -61,6 +67,7 @@ void main (void){
     H[o(0,i,j)] = K[o(2,i,j)] * H[o(0,i,j)] + K[o(3,i,j)] * (E[o(0,i,j + 1)] - E[o(0,i,j)] + E[o(1,i,j)] - E[o(1,i + 1,j)]);
     // H[i][j] = K[2][i][j] * H[i][j] + K[3][i][j] * (E[0][i][j + 1] - E[0][i][j] + E[1][i][j] - E[1][i + 1][j]);
 
-    vec3 bytes = jet(float(H[o(0,i,j)]));
+    vec3 plotcolor = vec3(c[o(0,i,j)].r, c[o(0,i,j)].g, c[o(0,i,j)].b);
+    vec3 bytes = mix(plotcolor, jet(float(H[o(0,i,j)])), c[o(0,i,j)].a);
     p[o(0,j,i)] = (uint(bytes.b * 255) << 16) | (uint(bytes.g * 255) << 8) | uint(bytes.r * 255) | 0xFF000000;
 }

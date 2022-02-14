@@ -29,6 +29,7 @@ typedef struct simulation{
     double* dev_E = nullptr;
     double* dev_K = nullptr;
     uint32_t* dev_out = nullptr;
+    color* dev_color_mask = nullptr;
     // plotter
     plotter* p;
     // iteration number
@@ -55,8 +56,8 @@ void destroy_simulation     (simulation* s);
 void destroy_field          (simulation* s);
 
 // drawing functions
-void draw_circle    (simulation* s, material mymat, int center_x, int center_y, int radius);
-void draw_rect      (simulation* s, material mymat, int start_x, int start_y, int width, int height);
-void draw_from_img  (simulation* s, material mymat, const char path[300]);
+void draw_circle    (simulation* s, material mymat, int center_x, int center_y, int radius, bool show_texture_on_plot=false, color plot_color={0.43, 0.52, 0.55, 0.5});
+void draw_rect      (simulation* s, material mymat, int start_x, int start_y, int width, int height, bool show_texture_on_plot=false, color plot_color={0.43, 0.52, 0.55, 0.5});
+void draw_from_img  (simulation* s, material mymat, const char path[300], bool show_texture_on_plot=false, color plot_color={0.43, 0.52, 0.55, 0.5});
 
 #endif

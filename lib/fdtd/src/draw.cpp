@@ -4,8 +4,14 @@ uint32_t o(plotter* s, uint32_t v, uint32_t i, uint32_t j){
     return v * s->width * s->height + i * s->height + j;
 }
 
+float limit(float v, float min, float max){
+    if(v < min) return min;
+    if(v > max) return max;
+    return v;
+}
+
 color jet(double v){
-    color c = {1., 1., 1.};
+    color c = {1., 1., 1., 1.};
     double dv, vmax = 1., vmin = -1.;
     if (v < vmin)
         v = vmin;
@@ -30,6 +36,15 @@ color jet(double v){
    return(c);
 }
 
+color mix(color a, color b){  // mix two colors
+    color c = {0., 0., 0.};
+    c.a = (1. - a.a) * b.a + a.a;
+    c.r = ((1 - a.a) * b.a * a.r + a.a * b.r) / c.a;
+    c.g = ((1 - a.a) * b.a * a.g + a.a * b.g) / c.a;
+    c.b = ((1 - a.a) * b.a * a.b + a.a * b.b) / c.a;
+    return c;
+}
+
 void init_plotter (plotter** p, int width, int height){
     *p = (plotter*) malloc(sizeof(plotter));
     (*p)->width = width;
@@ -44,13 +59,14 @@ void init_sdl (plotter* p){
 }
 
 void draw_field(plotter* p, EM_field* f, bool use_gpu){
+    color glass = {0.28, 0.4, 0.36};
     if (!use_gpu) {
-        #pragma omp parallel
+        // #pragma omp parallel
         for (int i = 0; i < p->width; i++){
-            #pragma omp for nowait
+            // #pragma omp for nowait
             for (int j = 0; j < p->height; j++){
-                color bytes = jet(f->H[o(p, 0, i, j)]);
-                f->out[o(p, 0, i, j)] = (uint(bytes.b * 255) << 16) | (uint(bytes.g * 255) << 8) | uint(bytes.r * 255) | 0xFF000000;
+                color bytes = mix(f->color_mask[o(p, 0, i, j)], jet(f->H[o(p, 0, i, j)]));
+                f->out[o(p, 0, i, j)] = uint(bytes.b * 255) << 16 | uint(bytes.g * 255) << 8 | uint(bytes.r * 255) | 0xFF000000;
             }
         }
     }
